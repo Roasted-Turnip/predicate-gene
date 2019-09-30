@@ -1,5 +1,5 @@
 import warnings
-warnings.filterwarnings('ignore')
+warnings.filterwarnings('ignore') #忽略warning
 import pandas as pd
 import numpy as np
 from sklearn import ensemble, tree, neighbors, linear_model, svm, naive_bayes
@@ -15,17 +15,17 @@ import sys
 from sklearn import preprocessing
 import os
 
-
+#检测输入数据集中是否存在空值
 def checkNanData(file):
     if file.isnull().any() == True:
         raise ValueError('Null values exist in this file,文件存在空值')
 
-
+#标准化数据，使用sklearn.preprocessing.StandardScaler方法
 def processingData(file):
     scaler = preprocessing.StandardScaler()
     file = scaler.fit_transform(file)
 
-
+#画ROC曲线
 def tune_roc_curve(classifier):
     tprs = []
     aucs = []
@@ -82,13 +82,15 @@ def tune_roc_curve(classifier):
     plt.title('Tune Hyperparameter {} ROC'.format(
         classifier.__class__.__name__))
     plt.legend(loc="lower right")
+	#高清输出
     plt.tight_layout()
+	#保存
     plt.savefig(os.path.join(
         path, 'Tune_hp {}.pdf'.format(classifier.__class__.__name__)),
                 format='pdf')
     plt.close()
 
-
+#预测结果输出，包括预测值，预测概率值
 def pred_ft_gene(clf):
     pred = clf.predict(testData.values)
     pred_pro = clf.predict_proba(testData.values)
@@ -106,17 +108,18 @@ def pred_ft_gene(clf):
         os.path.join(path,
                      '{} prediction.xlsx'.format(clf.__class__.__name__)))
 
-
+#获取当先路径
 path = os.getcwd()
+#sys.argv[1]为train数据集，sys.argv[2]为预测数据集
 DataSet = pd.read_csv(sys.argv[1], sep='\t', index_col='gene')
 testData = pd.read_csv(sys.argv[2], sep='\t', index_col='gene')
-
+#划分样本集和target，并转化为ndarray格式
 X = DataSet.drop(['label'], axis=1).values
 y = DataSet.label.values
-
+#调用processingData函数
 processingData(X)
 processingData(testData)
-
+#交叉验证方式采用StratifiedKFold，分层采样，交叉划分
 cv = StratifiedKFold(n_splits=5, random_state=42)
 
 scoring = {
@@ -126,7 +129,7 @@ scoring = {
     'f1_score': make_scorer(f1_score),
     'auc': make_scorer(roc_auc_score)
 }
-
+#各个算法的在网格调参的参数
 lr_param = {
     'fit_intercept': [True, False],  #default: True
     #'penalty': ['l1','l2'],
@@ -170,7 +173,7 @@ knn = neighbors.KNeighborsClassifier()
 adaboost = ensemble.AdaBoostClassifier()
 bagging = ensemble.BaggingClassifier()
 xgb = XGBClassifier()
-
+#网格调参，评分采用AUC
 lr_gs = GridSearchCV(estimator=lr,
                      param_grid=lr_param,
                      cv=cv,
@@ -208,7 +211,7 @@ svm_gs = svm_gs.fit(X, y)
 ada_gs = ada_gs.fit(X, y)
 bagging_gs = bagging_gs.fit(X, y)
 xgb_gs = xgb_gs.fit(X, y)
-
+#获取最佳模型
 Blr = lr_gs.best_estimator_
 Bknn = knn_gs.best_estimator_
 Bsvm = svm_gs.best_estimator_
